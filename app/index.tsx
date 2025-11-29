@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   ScrollView,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 
 const CATEGORIES = ['All', 'Burgers', 'Pizza', 'Salads', 'Desserts'];
 
@@ -21,9 +22,21 @@ const FOOD_ITEMS = [
   { id: '6', name: 'Margherita', price: '€10.99', category: 'Pizza' },
 ];
 
+const COUPONS = [
+  { id: '1', code: 'DEMO20', discount: '20% OFF', description: 'On all orders', expiry: '2025-12-31', minOrder: '€15' },
+  { id: '2', code: 'BURGER5', discount: '€5 OFF', description: 'On any burger', expiry: '2025-06-30', minOrder: '€10' },
+  { id: '3', code: 'FREEDELIVERY', discount: 'Free Delivery', description: 'No minimum order', expiry: '2025-07-15', minOrder: '€0' },
+  { id: '4', code: 'PIZZA30', discount: '30% OFF', description: 'On all pizzas', expiry: '2025-08-01', minOrder: '€20' },
+  { id: '5', code: 'WELCOME10', discount: '€10 OFF', description: 'First order only', expiry: '2025-12-31', minOrder: '€25' },
+];
+
+type Tab = 'home' | 'coupons' | 'cart' | 'profile';
+
 export default function FlatMinimalScreen() {
+  const [activeTab, setActiveTab] = useState<Tab>('home');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [foodImages, setFoodImages] = useState<Record<string, string>>({});
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   useEffect(() => {
     FOOD_ITEMS.forEach((item) => {
@@ -41,21 +54,24 @@ export default function FlatMinimalScreen() {
       ? FOOD_ITEMS
       : FOOD_ITEMS.filter((item) => item.category === selectedCategory);
 
-  return (
-    <View style={styles.container}>
-      {/* Coupon Banner */}
+  const handleCopy = async (code: string, id: string) => {
+    await Clipboard.setStringAsync(code);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const renderHomeContent = () => (
+    <>
       <View style={styles.couponBanner}>
         <Text style={styles.couponText}>🎫 Use code DEMO20 for 20% off!</Text>
       </View>
 
-      {/* Search Bar */}
       <TextInput
         style={styles.searchBar}
         placeholder="Search food..."
         placeholderTextColor="#888"
       />
 
-      {/* Categories */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -82,7 +98,6 @@ export default function FlatMinimalScreen() {
         ))}
       </ScrollView>
 
-      {/* Food Items Grid */}
       <FlatList
         data={filteredItems}
         numColumns={2}
@@ -100,24 +115,86 @@ export default function FlatMinimalScreen() {
           </TouchableOpacity>
         )}
       />
+    </>
+  );
 
-      {/* Bottom Navigation */}
+  const renderCouponsContent = () => (
+    <>
+      <View style={styles.couponsHeader}>
+        <Text style={styles.couponsHeaderTitle}>Available Coupons</Text>
+        <Text style={styles.couponsHeaderSubtitle}>{COUPONS.length} coupons available</Text>
+      </View>
+
+      <FlatList
+        data={COUPONS}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.couponsList}
+        renderItem={({ item }) => (
+          <View style={styles.couponCard}>
+            <View style={styles.couponLeft}>
+              <Text style={styles.discountText}>{item.discount}</Text>
+              <Text style={styles.descriptionText}>{item.description}</Text>
+            </View>
+            <View style={styles.couponRight}>
+              <View style={styles.codeContainer}>
+                <Text style={styles.codeText}>{item.code}</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.copyButton}
+                onPress={() => handleCopy(item.code, item.id)}
+              >
+                <Text style={styles.copyButtonText}>
+                  {copiedId === item.id ? 'Copied!' : 'Copy'}
+                </Text>
+              </TouchableOpacity>
+              <Text style={styles.expiryText}>Valid until {item.expiry}</Text>
+              <Text style={styles.minOrderText}>Min. order: {item.minOrder}</Text>
+            </View>
+          </View>
+        )}
+      />
+    </>
+  );
+
+  const renderPlaceholder = (title: string) => (
+    <View style={styles.placeholder}>
+      <Text style={styles.placeholderText}>{title}</Text>
+    </View>
+  );
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'home':
+        return renderHomeContent();
+      case 'coupons':
+        return renderCouponsContent();
+      case 'cart':
+        return renderPlaceholder('Cart');
+      case 'profile':
+        return renderPlaceholder('Profile');
+    }
+  };
+
+  return (
+    <View style={styles.container}>
+      {renderContent()}
+
       <View style={styles.bottomNav}>
-        <TouchableOpacity style={styles.navItem}>
+        <TouchableOpacity style={styles.navItem} onPress={() => setActiveTab('home')}>
           <Text style={styles.navIcon}>🏠</Text>
-          <Text style={styles.navText}>Home</Text>
+          <Text style={[styles.navText, activeTab === 'home' && styles.navTextActive]}>Home</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
+        <TouchableOpacity style={styles.navItem} onPress={() => setActiveTab('coupons')}>
           <Text style={styles.navIcon}>🎫</Text>
-          <Text style={styles.navText}>Coupons</Text>
+          <Text style={[styles.navText, activeTab === 'coupons' && styles.navTextActive]}>Coupons</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
+        <TouchableOpacity style={styles.navItem} onPress={() => setActiveTab('cart')}>
           <Text style={styles.navIcon}>🛒</Text>
-          <Text style={styles.navText}>Cart</Text>
+          <Text style={[styles.navText, activeTab === 'cart' && styles.navTextActive]}>Cart</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
+        <TouchableOpacity style={styles.navItem} onPress={() => setActiveTab('profile')}>
           <Text style={styles.navIcon}>👤</Text>
-          <Text style={styles.navText}>Profile</Text>
+          <Text style={[styles.navText, activeTab === 'profile' && styles.navTextActive]}>Profile</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -150,19 +227,19 @@ const styles = StyleSheet.create({
   },
   categoriesContainer: {
     paddingHorizontal: 16,
-  marginBottom: 8,
-  flexGrow: 0,
-  flexShrink: 0,
-  height: 35,
+    marginBottom: 8,
+    flexGrow: 0,
+    flexShrink: 0,
+    height: 35,
   },
-categoryButton: {
-  paddingHorizontal: 20,
-  paddingVertical: 8,
-  marginRight: 8,
-  backgroundColor: '#E0E0E0',
-  justifyContent: 'center',
-  height: 36,
-},
+  categoryButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    marginRight: 8,
+    backgroundColor: '#E0E0E0',
+    justifyContent: 'center',
+    height: 36,
+  },
   categoryButtonActive: {
     backgroundColor: '#2D2D2D',
   },
@@ -220,5 +297,98 @@ categoryButton: {
     color: '#F5F5F5',
     fontSize: 12,
     marginTop: 2,
+  },
+  navTextActive: {
+    color: '#FFD700',
+  },
+  // Coupons styles
+  couponsHeader: {
+    backgroundColor: '#FFD700',
+    padding: 16,
+  },
+  couponsHeaderTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#2D2D2D',
+  },
+  couponsHeaderSubtitle: {
+    fontSize: 14,
+    color: '#2D2D2D',
+    marginTop: 4,
+  },
+  couponsList: {
+    padding: 16,
+  },
+  couponCard: {
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    overflow: 'hidden',
+  },
+  couponLeft: {
+    flex: 1,
+    backgroundColor: '#2D2D2D',
+    padding: 16,
+    justifyContent: 'center',
+  },
+  discountText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFD700',
+  },
+  descriptionText: {
+    fontSize: 12,
+    color: '#F5F5F5',
+    marginTop: 4,
+  },
+  couponRight: {
+    flex: 1.5,
+    padding: 16,
+  },
+  codeContainer: {
+    backgroundColor: '#F5F5F5',
+    padding: 8,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderStyle: 'dashed',
+    alignItems: 'center',
+  },
+  codeText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#2D2D2D',
+    letterSpacing: 1,
+  },
+  copyButton: {
+    backgroundColor: '#2D2D2D',
+    padding: 10,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  copyButtonText: {
+    color: '#FFD700',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  expiryText: {
+    fontSize: 11,
+    color: '#888',
+    marginTop: 8,
+  },
+  minOrderText: {
+    fontSize: 11,
+    color: '#888',
+    marginTop: 2,
+  },
+  placeholder: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  placeholderText: {
+    fontSize: 24,
+    color: '#888',
   },
 });
